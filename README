@@ -1,0 +1,100 @@
+Copyright 2021 Diaconu Tudor-Gabriel
+
+Tema 2 SD 2021
+
+Pentru realizarea temei, am ales sa implementez structura de load-balancer ca
+fiind formata dintr-un hashring(vector de int-uri), un vector de adrese de
+servere si un int care tine minte numarul de replici din hashring.
+De asemenea, structura de server am ales sa fie constituita doar dintr-un
+hashtable.
+
+Functiile din server.c:
+
+- INIT
+  Am alocat server-ul si am creat hashtable-ul din respectivul server.
+
+- STORE
+  Este o operatie de put in hashtable-ul din server-ul respectiv.
+
+- REMOVE
+  Este o operatie de remove_entry in functie de cheia data pe hashtable-ul din
+  server-ul respectiv.
+
+- RETRIEVE
+  Este o operatie de get in functie de cheie pe hashtable.
+
+- FREE
+  Se da free hashtable-ului si apoi free server-ului.
+
+Functiile din load_balancer.c:
+
+- INIT
+  Am alocat load-balancer-ul, am alocat hashringul cu 300000 de elemente,
+  am alocat vectorul de adrese de servere cu 100000 de elemente si am
+  initializat numarul de replici cu 0.
+
+- STORE
+  Pentru aceasta functie sunt 2 cazuri: cel in care stocam in interior sau
+  cel in care hash-ul obiectului este mai mare decat toate hash-urile
+  replicilor, astfel fiind stocat obiectul pe server-ul primei replici.
+  Primul caz constituie parcurgerea hashring-ului, gasirea primei replici cu
+  hash mai mare decat obiectul si stocarea pe server-ul dorit. Cel de-al doilea
+  caz nu mai constituie parcurgerea hashring-ului, fiind direct stocat obiectul
+  pe server-ul primei replici.
+
+- RETRIEVE
+
+  Functia de retrieve este similara cu cea de store, singura diferenta fiind
+  faptul ca in loc de server_store, vom da server_retrieve
+
+- ADD_SERVER
+
+  Am initializat server-ul. Apoi am folosit 2 functii(una de adaugare in 
+  hashring si una de redistribuire a elementelor), fiecare fiind apelata pentru
+  toate cele 3 replici care constituie server-ul. In functia de adaugare in
+  hashring, am calculat si pozitia pe care adaugam, aceasta fiind utila pentru
+  redistribuire. Ideea din spatele functiei este parcurgerea hashring-ului si
+  gasirea primei replici din hashring cu hash-ul mai mare decat replica pe care
+  o adaugam. Cand gasim aceasta replica, shiftam cu un element la dreapta
+  vectorul si adaugam pe respectiva pozitie id-ul replicii. Ideea din spatele 
+  functiei de redistribuire a elementelor implica parcurgerea hashtable-ului
+  din server-ul replicii de pe pozitia urmatoare fata de pozitia pe care
+  adaugam replica dorita. Pentru fiecare obiect din acest hashtable, comparam
+  hash-ul cheii, iar daca acesta este mai mare decat hash-ul replicii de pe
+  pozitia precedenta SI mai mic decat hash-ul replicii pe care am adaugat-o,
+  vom muta obiectele din server-ul replicii urmatoare pe server-ul adaugat.
+  (iar in cazul in care adaugam replica pe prima pozitie din hashring,
+  adica daca hash-ul replicii este mai mare decat toate celelalte hash-uri, vom
+  verifica obiectele de pe server-ul primei replici din hashring
+  (ea devenind a doua dupa adaugarea noii replici); de asemenea,
+  pentru a adauga pe server-ul noii replici, trebuie ca hash-ul obiectelor
+  verificate in acest caz sa fie mai mare decat hash-ul ultimei replici din
+  hashring SAU mai mic decat hash-ul replicii pe care am adaugat-o in hashring).
+
+- REMOVE_SERVER
+
+  Ca la add_server, am folosit 2 functii(cea de stergere din hashring si cea de
+  redistribuire), fiecare fiind apelata pentru toate cele 3 replici care
+  constituie server-ul. Ideea din spatele functiei de redistribuire a
+  obiectelor implica gasirea pozitiei de pe care vom sterge elementul din
+  hashring. De asemenea, la aceasta redistribuire apar doua cazuri: cel in care
+  stergem replica in interior si cel in care stergem prima replica din
+  hashring. Daca stergem prima replica, vom parcurge toate obiectele din
+  hashtable-ul server-ului primei replici, iar daca hash-ul unui obiect este
+  mai mare decat cel al ultimei replici din hashring SAU mai mic decat hash-ul
+  replicii pe care o vom sterge, mutam obiectul in server-ul replicii de pe
+  pozitia urmatoare pozitiei pe care stergem replica. Daca stergem o replica
+  din interior, vom verifica toate obiectele de pe hashtable-ul server-ului
+  replicii respective, dar conditia de mutare pe server-ul replicii urmatoare
+  va fi ca hash-ul obiectului sa fie mai mic decat hash-ul replicii pe care
+  o stergem SI mai mare decat hash-ul replicii precedente. La functia de
+  stergere din hashring, ideea din spate este de a gasit elementul din
+  hashring care are eticheta dorita, iar in momentul in care il gasim, setam
+  pozitia, si pornind de la acea pozitie, shiftam elementele vectorului la
+  stanga. De asemenea, la finalul functiei de remove, eliberam memoria
+  server-ului pe care l-am sters.
+
+- FREE
+  Eliberam vectorul hashring, eliberam fiecare server din vectorul de adrese,
+  eliberam vectorul efectiv de adrese si eliberam si load_balancer-ul.
+
